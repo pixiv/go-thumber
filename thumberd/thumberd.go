@@ -120,10 +120,12 @@ func main() {
 
     var err error
 
+    http.HandleFunc("/", thumbServer)
+
     if *local != "" { // Run as a local web server
-        err = http.ListenAndServe(*local, http.HandlerFunc(thumbServer))
+        err = http.ListenAndServe(*local, nil)
     } else { // Run as FCGI via standard I/O
-        err = fcgi.Serve(nil, http.HandlerFunc(thumbServer))
+        err = fcgi.Serve(nil, nil)
     }
     if err != nil {
         log.Fatal(err)
