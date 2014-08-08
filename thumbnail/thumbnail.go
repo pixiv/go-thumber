@@ -4,7 +4,6 @@ package thumbnail
 
 import (
     "io"
-    "fmt"
     "math"
     "pixiv.net/go-thumber/jpeg"
     "pixiv.net/go-thumber/swscale"
@@ -30,7 +29,7 @@ func MakeThumbnail(src io.Reader, dst io.Writer, params ThumbnailParameters) err
     if err != nil {
         return err
     }
-    fmt.Printf("%dx%d\n", img.Width, img.Height);
+    //fmt.Printf("%dx%d\n", img.Width, img.Height);
 
     // If Upscale is enabled, always scale unless the image is already the target size
     // Otherwise, scale if either component is 
@@ -60,7 +59,7 @@ func MakeThumbnail(src io.Reader, dst io.Writer, params ThumbnailParameters) err
         }
     }
 
-    fmt.Printf("%dx%d\n", img.Width, img.Height);
+    //fmt.Printf("%dx%d\n", img.Width, img.Height);
 
     var cparams jpeg.CompressionParameters
 
