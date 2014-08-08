@@ -75,10 +75,12 @@ func Scale(src *jpeg.YUVImage, opts ScaleOptions) (*jpeg.YUVImage, error) {
         return nil, errors.New("sws_getContext failed")
     }
 
-    var srcYUVPtr [3](*uint8)
-    var dstYUVPtr [3](*uint8)
-    var srcStride [3](C.int)
-    var dstStride [3](C.int)
+    // We only need 3 planes, but libswscale is stupid and checks the alignment
+    // of all 4 pointers... better give it a dummy one.
+    var srcYUVPtr [4](*uint8)
+    var dstYUVPtr [4](*uint8)
+    var srcStride [4](C.int)
+    var dstStride [4](C.int)
     paddedWidth := pad(opts.DstWidth, jpeg.AlignSize)
     paddedHeight := pad(opts.DstHeight, jpeg.AlignSize)
     // Allocate image planes and pointers
