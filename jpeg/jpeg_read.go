@@ -53,6 +53,7 @@ type sourceManager struct {
     buffer [read_buffer_size]byte
     src io.Reader
     startOfFile bool
+    currentSize int
 }
 
 func getSourceManager(dinfo *C.struct_jpeg_decompress_struct) (ret *sourceManager) {
@@ -76,15 +77,14 @@ func sourceInit (dinfo *C.struct_jpeg_decompress_struct) {
 func sourceFill(dinfo *C.struct_jpeg_decompress_struct) C.boolean {
     mgr := getSourceManager(dinfo)
     bytes, err := mgr.src.Read(mgr.buffer[:])
-    //fmt.Printf("Read %d bytes\n", bytes)
     mgr.pub.bytes_in_buffer = C.size_t(bytes)
+    mgr.currentSize = bytes
     mgr.pub.next_input_byte = (*C.JOCTET)(&mgr.buffer[0])
     if err == io.EOF {
         if bytes == 0 {
             if mgr.startOfFile {
                 panic("input is empty")
             }
-            //fmt.Printf("Fake EOF\n")
             // EOF and need more data. Fill in a fake EOI to get a partial image.
             mgr.buffer[0] = 0xff
             mgr.buffer[1] = C.JPEG_EOI
@@ -109,7 +109,7 @@ func sourceSkip(dinfo *C.struct_jpeg_decompress_struct, bytes C.long) {
     }
     mgr.pub.bytes_in_buffer -= C.size_t(bytes)
     if mgr.pub.bytes_in_buffer != 0 {
-        mgr.pub.next_input_byte = (*C.JOCTET)(&mgr.buffer[read_buffer_size - mgr.pub.bytes_in_buffer])
+        mgr.pub.next_input_byte = (*C.JOCTET)(&mgr.buffer[mgr.currentSize - int(mgr.pub.bytes_in_buffer)])
     }
 }
 
