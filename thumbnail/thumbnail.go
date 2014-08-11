@@ -31,12 +31,14 @@ func MakeThumbnail(src io.Reader, dst io.Writer, params ThumbnailParameters) err
     }
     //fmt.Printf("%dx%d\n", img.Width, img.Height);
 
-    // If Upscale is enabled, always scale unless the image is already the target size
-    // Otherwise, scale if either component is 
-    if (params.Upscale && (img.Width < params.Width || img.Height < params.Height) ||
-        (img.Width > params.Width) ||
-        (img.Height > params.Height) ||
-        params.ForceAspect && (img.Width != params.Width || img.Height != params.Height)) {
+    if !params.Upscale && !params.ForceAspect &&
+        img.Width < params.Width && img.Height < params.Height {
+        params.Width = img.Width
+        params.Height = img.Height
+    }
+
+    if (img.Width != params.Width || img.Height != params.Height ||
+        (img.Format != jpeg.YUV444 && img.Format != jpeg.Grayscale)) {
 
         var opts swscale.ScaleOptions
         opts.DstWidth = params.Width
