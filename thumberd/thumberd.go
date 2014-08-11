@@ -18,6 +18,9 @@ var timeout = flag.Int("timeout", 3, "timeout for upstream HTTP requests, in sec
 
 var client http.Client
 
+const maxDimension = 65000
+const maxPixels = 10000000
+
 func init() {
     runtime.GOMAXPROCS(runtime.NumCPU())
 }
@@ -79,12 +82,16 @@ func thumbServer(w http.ResponseWriter, r *http.Request) {
                 params.PrescaleFactor = val
         }
     }
-    if params.Width <= 0 {
+    if params.Width <= 0 || params.Width > maxDimension {
         http.Error(w, "Width (w) not specified or invalid", http.StatusBadRequest)
         return
     }
-    if params.Height <= 0 {
+    if params.Height <= 0 || params.Height > maxDimension {
         http.Error(w, "Height (h) not specified or invalid", http.StatusBadRequest)
+        return
+    }
+    if params.Width * params.Height > maxPixels {
+        http.Error(w, "Image dimensions are insane", http.StatusBadRequest)
         return
     }
     if params.Quality > 100 || params.Quality < 0 {
