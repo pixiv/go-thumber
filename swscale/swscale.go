@@ -1,3 +1,5 @@
+// Package swscale provides an interface to the libswscale library to scale
+// YUV images.
 package swscale
 
 /*
@@ -16,31 +18,35 @@ import (
 	"github.com/pixiv/go-thumber/jpeg"
 )
 
+// Filter identifies which scaling (interpolation) filter to use
 type Filter int
 
+// Supported scaling filters
 const (
-	FAST_BILINEAR Filter = C.SWS_FAST_BILINEAR
-	BILINEAR      Filter = C.SWS_BILINEAR
-	BICUBIC       Filter = C.SWS_BICUBIC
-	X             Filter = C.SWS_X
-	POINT         Filter = C.SWS_POINT
-	AREA          Filter = C.SWS_AREA
-	BICUBLIN      Filter = C.SWS_BICUBLIN
-	GAUSS         Filter = C.SWS_GAUSS
-	SINC          Filter = C.SWS_SINC
-	LANCZOS       Filter = C.SWS_LANCZOS
-	SPLINE        Filter = C.SWS_SPLINE
+	FastBilinear Filter = C.SWS_FAST_BILINEAR
+	Bilinear     Filter = C.SWS_BILINEAR
+	Bicubic      Filter = C.SWS_BICUBIC
+	X            Filter = C.SWS_X
+	Point        Filter = C.SWS_POINT
+	Area         Filter = C.SWS_AREA
+	Bicublin     Filter = C.SWS_BICUBLIN
+	Gauss        Filter = C.SWS_GAUSS
+	Sinc         Filter = C.SWS_SINC
+	Lanczos      Filter = C.SWS_LANCZOS
+	Spline       Filter = C.SWS_SPLINE
 )
 
+// ScaleOptions contains scaling parameters
 type ScaleOptions struct {
-	DstWidth, DstHeight int
-	Filter              Filter
+	DstWidth, DstHeight int    // Target dimensions
+	Filter              Filter // Filter type
 }
 
 func pad(a int, b int) int {
 	return (a + (b - 1)) & (^(b - 1))
 }
 
+// Scale a YUVImage and return the new YUVImage
 func Scale(src *jpeg.YUVImage, opts ScaleOptions) (*jpeg.YUVImage, error) {
 	// Figure out what format we're dealing with
 	var srcFmt, dstFmt int32

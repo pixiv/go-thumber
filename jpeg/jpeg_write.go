@@ -1,6 +1,10 @@
-/* Refer to jpeg_read.go for all the dragons. jpeg_write.go is just the summer
- * hangout of a few of them. */
+// Package jpeg implements reading and writing JPEG files as planar YUV data.
 package jpeg
+
+/*
+Refer to jpeg_read.go for all the dragons. jpeg_write.go is just the summer
+hangout of a few of them.
+*/
 
 /*
 #cgo LDFLAGS: -ljpeg
@@ -11,7 +15,7 @@ package jpeg
 
 // jpeg_create_compress is a macro that cgo doesn't know about; wrap it.
 static void c_jpeg_create_compress(j_compress_ptr cinfo) {
-    jpeg_create_compress(cinfo);
+	jpeg_create_compress(cinfo);
 }
 
 void error_panic(j_common_ptr cinfo);
@@ -29,12 +33,12 @@ import (
 	"unsafe"
 )
 
-const write_buffer_size = 16384
+const writeBufferSize = 16384
 
 type destinationManager struct {
 	magic  uint32
 	pub    C.struct_jpeg_destination_mgr
-	buffer [write_buffer_size]byte
+	buffer [writeBufferSize]byte
 	dest   io.Writer
 }
 
@@ -54,16 +58,16 @@ func destinationInit(cinfo *C.struct_jpeg_compress_struct) {
 	// do nothing
 }
 
-func flushBuffer(mgr *destinationManager, in_buffer int) {
+func flushBuffer(mgr *destinationManager, inBuffer int) {
 	wrote := 0
-	for wrote != in_buffer {
-		bytes, err := mgr.dest.Write(mgr.buffer[wrote:in_buffer])
+	for wrote != inBuffer {
+		bytes, err := mgr.dest.Write(mgr.buffer[wrote:inBuffer])
 		if err != nil {
 			panic(err)
 		}
 		wrote += int(bytes)
 	}
-	mgr.pub.free_in_buffer = write_buffer_size
+	mgr.pub.free_in_buffer = writeBufferSize
 	mgr.pub.next_output_byte = (*C.JOCTET)(&mgr.buffer[0])
 }
 
@@ -71,7 +75,7 @@ func flushBuffer(mgr *destinationManager, in_buffer int) {
 func destinationEmpty(cinfo *C.struct_jpeg_compress_struct) C.boolean {
 	// need to write *entire* buffer, not subtracting free_in_buffer
 	mgr := getDestinationManager(cinfo)
-	flushBuffer(mgr, write_buffer_size)
+	flushBuffer(mgr, writeBufferSize)
 	return C.TRUE
 }
 
@@ -79,8 +83,8 @@ func destinationEmpty(cinfo *C.struct_jpeg_compress_struct) C.boolean {
 func destinationTerm(cinfo *C.struct_jpeg_compress_struct) {
 	// just empty buffer
 	mgr := getDestinationManager(cinfo)
-	in_buffer := int(write_buffer_size - mgr.pub.free_in_buffer)
-	flushBuffer(mgr, in_buffer)
+	inBuffer := int(writeBufferSize - mgr.pub.free_in_buffer)
+	flushBuffer(mgr, inBuffer)
 }
 
 func makeDestinationManager(dest io.Writer, cinfo *C.struct_jpeg_compress_struct) (ret destinationManager) {
@@ -89,18 +93,20 @@ func makeDestinationManager(dest io.Writer, cinfo *C.struct_jpeg_compress_struct
 	ret.pub.init_destination = (*[0]byte)(C.destinationInit)
 	ret.pub.empty_output_buffer = (*[0]byte)(C.destinationEmpty)
 	ret.pub.term_destination = (*[0]byte)(C.destinationTerm)
-	ret.pub.free_in_buffer = write_buffer_size
+	ret.pub.free_in_buffer = writeBufferSize
 	ret.pub.next_output_byte = (*C.JOCTET)(&ret.buffer[0])
 	cinfo.dest = &ret.pub
 	return
 }
 
+// CompressionParameters specifies which settings to use during Compression.
 type CompressionParameters struct {
-	Quality  int
-	Optimize bool
-	FastDCT  bool // note: do not use for Quality > 90
+	Quality  int  // Desired JPEG quality, 0-99
+	Optimize bool // Whether to optimize the Huffman tables (slower)
+	FastDCT  bool // Use a faster, less accurate DCT (note: do not use for Quality > 90)
 }
 
+// WriteJPEG writes a YUVImage as a JPEG into dest.
 func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -153,11 +159,11 @@ func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err
 	} else {
 		cinfo.dct_method = C.JDCT_ISLOW
 	}
-	comp_info := (*[3]C.jpeg_component_info)(unsafe.Pointer(cinfo.comp_info))
+	compInfo := (*[3]C.jpeg_component_info)(unsafe.Pointer(cinfo.comp_info))
 
 	for i := 0; i < int(cinfo.input_components); i++ {
-		comp_info[i].h_samp_factor = 1
-		comp_info[i].v_samp_factor = 1
+		compInfo[i].h_samp_factor = 1
+		compInfo[i].v_samp_factor = 1
 	}
 
 	// libjpeg raw data in is in planar format, which avoids unnecessary
@@ -170,11 +176,11 @@ func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err
 	// Allocate JSAMPIMAGE to hold pointers to one iMCU worth of image data
 	// this is a safe overestimate; we use the return value from
 	// jpeg_read_raw_data to figure out what is the actual iMCU row count.
-	var yuvptr_i [3][AlignSize]C.JSAMPROW
-	yuvptr := [3]C.JSAMPARRAY{
-		C.JSAMPARRAY(unsafe.Pointer(&yuvptr_i[0][0])),
-		C.JSAMPARRAY(unsafe.Pointer(&yuvptr_i[1][0])),
-		C.JSAMPARRAY(unsafe.Pointer(&yuvptr_i[2][0])),
+	var yuvPtrInt [3][AlignSize]C.JSAMPROW
+	yuvPtr := [3]C.JSAMPARRAY{
+		C.JSAMPARRAY(unsafe.Pointer(&yuvPtrInt[0][0])),
+		C.JSAMPARRAY(unsafe.Pointer(&yuvPtrInt[1][0])),
+		C.JSAMPARRAY(unsafe.Pointer(&yuvPtrInt[2][0])),
 	}
 
 	// Encode the image.
@@ -182,13 +188,13 @@ func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err
 	for row = 0; row < cinfo.image_height; {
 		// First fill in the pointers into the plane data buffers
 		for i := 0; i < int(cinfo.num_components); i++ {
-			for j := 0; j < int(C.DCTSIZE*comp_info[i].v_samp_factor); j++ {
+			for j := 0; j < int(C.DCTSIZE*compInfo[i].v_samp_factor); j++ {
 				compRow := (int(row) + j)
-				yuvptr_i[i][j] = C.JSAMPROW(unsafe.Pointer(&img.Data[i][img.Stride[i]*compRow]))
+				yuvPtrInt[i][j] = C.JSAMPROW(unsafe.Pointer(&img.Data[i][img.Stride[i]*compRow]))
 			}
 		}
 		// Get the data
-		row += C.jpeg_write_raw_data(&cinfo, C.JSAMPIMAGE(unsafe.Pointer(&yuvptr[0])), C.JDIMENSION(C.DCTSIZE*comp_info[0].v_samp_factor))
+		row += C.jpeg_write_raw_data(&cinfo, C.JSAMPIMAGE(unsafe.Pointer(&yuvPtr[0])), C.JDIMENSION(C.DCTSIZE*compInfo[0].v_samp_factor))
 	}
 
 	// Clean up

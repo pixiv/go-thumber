@@ -1,5 +1,5 @@
-/* Here be dragons. */
-
+// Package thumbnail provides a simple interface to thumbnail a JPEG stream and
+// return the thumbnailed version.
 package thumbnail
 
 import (
@@ -10,16 +10,18 @@ import (
 	"github.com/pixiv/go-thumber/swscale"
 )
 
+// ThumbnailParameters configures the thumbnailing process
 type ThumbnailParameters struct {
-	Width          int
-	Height         int
-	Upscale        bool
-	ForceAspect    bool
-	Quality        int
-	Optimize       bool
-	PrescaleFactor float64
+	Width          int     // Target width
+	Height         int     // Target height
+	Upscale        bool    // Whether to upscale images that are smaller than the target
+	ForceAspect    bool    // Whether the source aspect ratio should be preserved
+	Quality        int     // JPEG quality (0-99)
+	Optimize       bool    // Whether to optimize the JPEG huffman tables
+	PrescaleFactor float64 // Controls whether optimized JPEG prescaling is used and how much.
 }
 
+// MakeThumbnail makes a thumbnail of a JPEG stream at src and writes it to dst.
 func MakeThumbnail(src io.Reader, dst io.Writer, params ThumbnailParameters) error {
 	var dparams jpeg.DecompressionParameters
 	if params.PrescaleFactor > 0 {
@@ -51,7 +53,7 @@ func MakeThumbnail(src io.Reader, dst io.Writer, params ThumbnailParameters) err
 				opts.DstHeight = int(float64(params.Width*img.Height)/float64(img.Width) + 0.5)
 			}
 		}
-		opts.Filter = swscale.LANCZOS
+		opts.Filter = swscale.Lanczos
 		// swscale can't handle images smaller than this; punt and don't scale
 		// them.
 		if opts.DstWidth >= 8 && img.Width >= 4 {

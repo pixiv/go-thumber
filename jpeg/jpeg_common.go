@@ -16,11 +16,14 @@ func goPanic(msg *C.char) {
 	panic(C.GoString(msg))
 }
 
-// Pixel formats
-type PixelFormat int
 
+// The dimension multiple to which data buffers should be aligned.
 const AlignSize int = 16
 
+// PixelFormat represents a JPEG pixel format (either YUVxxx or Grayscale).
+type PixelFormat int
+
+// Valid PixelFormats
 const (
 	Grayscale PixelFormat = iota
 	YUV444                // 1x1 subsampling
@@ -36,8 +39,10 @@ const (
 	V = 2
 )
 
-/* Represents a planar image. Data is stored in a raw array of bytes for each
- * plane, with an explicit stride (instead of a multidimensional array). */
+// YUVImage represents a planar image. Data is stored in a raw array of bytes
+// for each plane, with an explicit stride (instead of a multidimensional
+// array). This should probably be replaced with image.YCbCr (which I didn't
+// know existed...)
 type YUVImage struct {
 	Width, Height int
 	Format        PixelFormat

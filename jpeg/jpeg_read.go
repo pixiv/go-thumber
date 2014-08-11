@@ -1,5 +1,7 @@
-/* Here be dragons. */
+// Package jpeg implements reading and writing JPEG files as planar YUV data.
 package jpeg
+
+// Here be dragons.
 
 /*
 #cgo LDFLAGS: -ljpeg
@@ -10,7 +12,7 @@ package jpeg
 
 // jpeg_create_decompress is a macro that cgo doesn't know about; wrap it.
 static void c_jpeg_create_decompress(j_decompress_ptr dinfo) {
-    jpeg_create_decompress(dinfo);
+	jpeg_create_decompress(dinfo);
 }
 
 void error_panic(j_common_ptr dinfo);
@@ -22,9 +24,9 @@ void sourceTerm(struct jpeg_decompress_struct*);
 
 static int DCT_v_scaled_size(j_decompress_ptr dinfo, int component) {
 #if JPEG_LIB_VERSION >= 70
-    return dinfo->comp_info[component].DCT_v_scaled_size;
+	return dinfo->comp_info[component].DCT_v_scaled_size;
 #else
-    return dinfo->comp_info[component].DCT_scaled_size;
+	return dinfo->comp_info[component].DCT_scaled_size;
 #endif
 }
 
@@ -38,12 +40,12 @@ import (
 	"unsafe"
 )
 
-const read_buffer_size = 16384
+const readBufferSize = 16384
 
 type sourceManager struct {
 	magic       uint32
 	pub         C.struct_jpeg_source_mgr
-	buffer      [read_buffer_size]byte
+	buffer      [readBufferSize]byte
 	src         io.Reader
 	startOfFile bool
 	currentSize int
@@ -125,10 +127,13 @@ func makeSourceManager(src io.Reader, dinfo *C.struct_jpeg_decompress_struct) (r
 	return
 }
 
+// DecompressionParameters specifies which settings to use during decompression.
+// TargetWidth, TargetHeight specify the minimum image dimensions required. The
+// image will be downsampled if applicable.
 type DecompressionParameters struct {
-	TargetWidth  int
-	TargetHeight int
-	FastDCT      bool // note: do not use for Quality > 90
+	TargetWidth  int  // Desired output width
+	TargetHeight int  // Desired output height
+	FastDCT      bool // Use a faster, less accurate DCT (note: do not use for Quality > 90)
 }
 
 // Calculate the smallest scale factor (in eigths) that will, after rounding
@@ -138,6 +143,7 @@ func calcScale(target float64, size float64) int {
 	return int(math.Ceil((target * 8) * (1 - 1/(size)) / size))
 }
 
+// ReadJPEG reads a JPEG file and returns a planar YUV image.
 func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -189,7 +195,7 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 	C.jpeg_calc_output_dimensions(&dinfo)
 
 	// Figure out what color format we're dealing with after scaling
-	comp_info := (*[3]C.jpeg_component_info)(unsafe.Pointer(dinfo.comp_info))
+	compInfo := (*[3]C.jpeg_component_info)(unsafe.Pointer(dinfo.comp_info))
 	colorVDiv := 1
 	switch dinfo.num_components {
 	case 1:
@@ -202,30 +208,30 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 		if dinfo.jpeg_color_space != C.JCS_YCbCr {
 			panic("Unsupported colorspace")
 		}
-		dw_y := comp_info[Y].downsampled_width
-		dh_y := comp_info[Y].downsampled_height
-		dw_c := comp_info[U].downsampled_width
-		dh_c := comp_info[U].downsampled_height
-		//fmt.Printf("%d %d %d %d\n", dw_y, dh_y, dw_c, dh_c)
-		if dw_c != comp_info[V].downsampled_width || dh_c != comp_info[V].downsampled_height {
+		dwY := compInfo[Y].downsampled_width
+		dhY := compInfo[Y].downsampled_height
+		dwC := compInfo[U].downsampled_width
+		dhC := compInfo[U].downsampled_height
+		//fmt.Printf("%d %d %d %d\n", dwY, dhY, dwC, dhC)
+		if dwC != compInfo[V].downsampled_width || dhC != compInfo[V].downsampled_height {
 			panic("Unsupported color subsampling (Cb and Cr differ)")
 		}
 		// Since the decisions about which DCT size and subsampling mode
 		// to use, if any, are complex, instead just check the calculated
 		// output plane sizes and infer the subsampling mode from that.
-		if dw_y == dw_c {
-			if dh_y == dh_c {
+		if dwY == dwC {
+			if dhY == dhC {
 				img.Format = YUV444
-			} else if (dh_y+1)/2 == dh_c {
+			} else if (dhY+1)/2 == dhC {
 				img.Format = YUV440
 				colorVDiv = 2
 			} else {
 				panic("Unsupported color subsampling (vertical is not 1 or 2)")
 			}
-		} else if (dw_y+1)/2 == dw_c {
-			if dh_y == dh_c {
+		} else if (dwY+1)/2 == dwC {
+			if dhY == dhC {
 				img.Format = YUV422
-			} else if (dh_y+1)/2 == dh_c {
+			} else if (dhY+1)/2 == dhC {
 				img.Format = YUV420
 				colorVDiv = 2
 			} else {
@@ -238,8 +244,8 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 		panic("Unsupported number of components")
 	}
 
-	img.Width = int(comp_info[Y].downsampled_width)
-	img.Height = int(comp_info[Y].downsampled_height)
+	img.Width = int(compInfo[Y].downsampled_width)
+	img.Height = int(compInfo[Y].downsampled_height)
 	//fmt.Printf("%dx%d (format: %d)\n", img.Width, img.Height, img.Format)
 	//fmt.Printf("Output: %dx%d\n", dinfo.output_width, dinfo.output_height)
 
@@ -250,15 +256,15 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 	// Allocate image planes
 	for i := 0; i < int(dinfo.num_components); i++ {
 		/*fmt.Printf("%d: %dx%d (DCT %dx%d, %dx%d blocks sf %dx%d)\n", i,
-		  comp_info[i].downsampled_width, comp_info[i].downsampled_height,
-		  comp_info[i].DCT_scaled_size, comp_info[i].DCT_scaled_size,
-		  comp_info[i].width_in_blocks, comp_info[i].height_in_blocks,
-		  comp_info[i].h_samp_factor, comp_info[i].v_samp_factor)*/
+		  compInfo[i].downsampled_width, compInfo[i].downsampled_height,
+		  compInfo[i].DCT_scaled_size, compInfo[i].DCT_scaled_size,
+		  compInfo[i].width_in_blocks, compInfo[i].height_in_blocks,
+		  compInfo[i].h_samp_factor, compInfo[i].v_samp_factor)*/
 		// When downsampling, odd modes like 14x14 may be used. Pad to AlignSize
 		// (16) and then add an extra AlignSize padding, to cover overflow from
 		// any such modes.
-		img.Stride[i] = pad(int(comp_info[i].downsampled_width), AlignSize) + AlignSize
-		height := pad(int(comp_info[i].downsampled_height), AlignSize) + AlignSize
+		img.Stride[i] = pad(int(compInfo[i].downsampled_width), AlignSize) + AlignSize
+		height := pad(int(compInfo[i].downsampled_height), AlignSize) + AlignSize
 		img.Data[i] = make([]byte, img.Stride[i]*height)
 	}
 
@@ -280,7 +286,7 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 
 	var iMCURows int
 	for i := 0; i < int(dinfo.num_components); i++ {
-		compRows := int(C.DCT_v_scaled_size(&dinfo, C.int(i)) * comp_info[i].v_samp_factor)
+		compRows := int(C.DCT_v_scaled_size(&dinfo, C.int(i)) * compInfo[i].v_samp_factor)
 		if compRows > iMCURows {
 			iMCURows = compRows
 		}
