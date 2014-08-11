@@ -12,7 +12,7 @@ import "C"
 import (
     "errors"
     "unsafe"
-    "pixiv.net/go-thumber/jpeg"
+    "github.com/pixiv/go-thumber/jpeg"
 )
 
 type Filter int

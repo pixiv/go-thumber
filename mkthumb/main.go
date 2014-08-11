@@ -4,7 +4,7 @@ import (
     "flag"
     "fmt"
     "os"
-    "pixiv.net/go-thumber/thumbnail"
+    "github.com/pixiv/go-thumber/thumbnail"
 )
 
 var params thumbnail.ThumbnailParameters

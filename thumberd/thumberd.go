@@ -5,7 +5,7 @@ import (
     "log"
     "net/http"
     "net/http/fcgi"
-    "pixiv.net/go-thumber/thumbnail"
+    "github.com/pixiv/go-thumber/thumbnail"
     "runtime"
     "time"
     "net/url"
