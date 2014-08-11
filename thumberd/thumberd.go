@@ -97,6 +97,10 @@ func thumbServer(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Upstream failed: " + err.Error(), http.StatusBadGateway)
         return
     }
+    if srcReader.StatusCode != http.StatusOK {
+        http.Error(w, "Upstream failed: " + srcReader.Status, srcReader.StatusCode)
+        return
+    }
 
     w.Header().Set("Content-Type", "image/jpeg")
     err = thumbnail.MakeThumbnail(srcReader.Body, w, params)
