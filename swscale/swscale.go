@@ -11,8 +11,9 @@ import "C"
 
 import (
 	"errors"
-	"github.com/pixiv/go-thumber/jpeg"
 	"unsafe"
+
+	"github.com/pixiv/go-thumber/jpeg"
 )
 
 type Filter int

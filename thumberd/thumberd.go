@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"github.com/pixiv/go-thumber/thumbnail"
 	"log"
 	"net/http"
 	"net/http/fcgi"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pixiv/go-thumber/thumbnail"
 )
 
 var local = flag.String("local", "", "serve as webserver, example: 0.0.0.0:8000")

@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/pixiv/go-thumber/thumbnail"
 	"os"
+
+	"github.com/pixiv/go-thumber/thumbnail"
 )
 
 var params thumbnail.ThumbnailParameters

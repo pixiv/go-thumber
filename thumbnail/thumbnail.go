@@ -3,10 +3,11 @@
 package thumbnail
 
 import (
-	"github.com/pixiv/go-thumber/jpeg"
-	"github.com/pixiv/go-thumber/swscale"
 	"io"
 	"math"
+
+	"github.com/pixiv/go-thumber/jpeg"
+	"github.com/pixiv/go-thumber/swscale"
 )
 
 type ThumbnailParameters struct {
