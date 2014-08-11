@@ -20,13 +20,6 @@ void sourceSkip(struct jpeg_decompress_struct*, long);
 boolean sourceFill(struct jpeg_decompress_struct*);
 void sourceTerm(struct jpeg_decompress_struct*);
 
-static int min_DCT_v_scaled_size(j_decompress_ptr dinfo) {
-#if JPEG_LIB_VERSION >= 70
-    return dinfo->min_DCT_v_scaled_size;
-#else
-    return dinfo->min_DCT_scaled_size;
-#endif
-}
 static int DCT_v_scaled_size(j_decompress_ptr dinfo, int component) {
 #if JPEG_LIB_VERSION >= 70
     return dinfo->comp_info[component].DCT_v_scaled_size;
