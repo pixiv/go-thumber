@@ -82,6 +82,8 @@ func Scale(src *jpeg.YUVImage, opts ScaleOptions) (*jpeg.YUVImage, error) {
 		return nil, errors.New("sws_getContext failed")
 	}
 
+	defer C.sws_freeContext(sws)
+
 	// We only need 3 planes, but libswscale is stupid and checks the alignment
 	// of all 4 pointers... better give it a dummy one.
 	var srcYUVPtr [4](*uint8)
@@ -104,8 +106,6 @@ func Scale(src *jpeg.YUVImage, opts ScaleOptions) (*jpeg.YUVImage, error) {
 
 	C.sws_scale(sws, (**C.uint8_t)(unsafe.Pointer(&srcYUVPtr[0])), &srcStride[0], 0, C.int(src.Height),
 		(**C.uint8_t)(unsafe.Pointer(&dstYUVPtr[0])), &dstStride[0])
-
-	C.sws_freeContext(sws)
 
 	// Replicate the last column and row of pixels as padding, which is typical
 	// behavior prior to JPEG compression

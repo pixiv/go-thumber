@@ -168,6 +168,8 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 
 	// Initialize decompression
 	C.c_jpeg_create_decompress(&dinfo)
+	defer C.jpeg_destroy_decompress(&dinfo)
+
 	makeSourceManager(src, &dinfo)
 	C.jpeg_read_header(&dinfo, C.TRUE)
 
@@ -309,7 +311,6 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 
 	// Clean up
 	C.jpeg_finish_decompress(&dinfo)
-	C.jpeg_destroy_decompress(&dinfo)
 
 	return
 }

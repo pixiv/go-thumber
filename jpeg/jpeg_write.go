@@ -134,6 +134,8 @@ func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err
 
 	// Initialize compression object
 	C.c_jpeg_create_compress(&cinfo)
+	defer C.jpeg_destroy_compress(&cinfo)
+
 	makeDestinationManager(dest, &cinfo)
 
 	// Set up compression parameters
@@ -199,7 +201,6 @@ func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err
 
 	// Clean up
 	C.jpeg_finish_compress(&cinfo)
-	C.jpeg_destroy_compress(&cinfo)
 
 	return
 }
