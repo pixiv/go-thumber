@@ -21,7 +21,8 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() != 2 {
-		fmt.Printf("Two non-flag args are required\n")
+		fmt.Printf("USAGE: mkthumb [options] input_file output_file\n")
+		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
