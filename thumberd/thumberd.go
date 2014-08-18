@@ -41,6 +41,10 @@ func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
+func errorServer(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "404 Not Found", http.StatusNotFound)
+}
+
 func statusServer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprintf(w, "version %s\n", version)
@@ -188,6 +192,7 @@ func main() {
 	var err error
 
 	http.HandleFunc("/server-status", statusServer)
+	http.HandleFunc("/favicon.ico", errorServer)
 
 	http.HandleFunc("/", thumbServer)
 
