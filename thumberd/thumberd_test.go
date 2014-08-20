@@ -46,6 +46,27 @@ func TestThumbServerWithSuccessCase(t *testing.T) {
 	}
 }
 
+func BenchmarkThumbServer(b *testing.B) {
+	ts := httptest.NewServer(http.HandlerFunc(thumbServer))
+	defer ts.Close()
+
+	origin := httptest.NewServer(http.HandlerFunc(originImageHandler))
+	defer origin.Close()
+	originHost := fmt.Sprintf(strings.Replace(origin.URL, "http://", "", 1))
+
+	for i := 0; i < b.N; i++ {
+		res, err := http.Get(ts.URL + "/w=128,h=128,a=0,q=95/" + originHost + "/")
+		if err != nil {
+			b.Error("unexpected", i)
+			return
+		}
+		if res.StatusCode != 200 {
+			b.Error("Status code should be 200, but got ", res.StatusCode, i)
+			return
+		}
+	}
+}
+
 func TestThumbServerWithInvalidParam(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(thumbServer))
 	defer ts.Close()
