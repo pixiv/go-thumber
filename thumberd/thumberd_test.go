@@ -26,7 +26,7 @@ func originImageHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "../test-image/test001.jpg")
 }
 
-func TestStatusServerSuccessCase(t *testing.T) {
+func TestThumbServerWithSuccessCase(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(thumbServer))
 	defer ts.Close()
 
@@ -46,7 +46,7 @@ func TestStatusServerSuccessCase(t *testing.T) {
 	}
 }
 
-func TestStatusServerInvalidParam(t *testing.T) {
+func TestThumbServerWithInvalidParam(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(thumbServer))
 	defer ts.Close()
 
