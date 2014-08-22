@@ -150,15 +150,30 @@ func thumbServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	srcReader, err := client.Get("http://" + parts[1])
+	req, err := http.NewRequest("GET", "http://" + parts[1], nil);
 	if err != nil {
 		http.Error(w, "Upstream failed: "+err.Error(), http.StatusBadGateway)
 		atomic.AddInt64(&http_stats.upstream_error, 1)
 		return
 	}
-	if srcReader.StatusCode != http.StatusOK {
+	if ( r.Header.Get("If-Modified-Since") != "" ) {
+		req.Header.Add("If-Modified-Since", r.Header.Get("If-Modified-Since"));
+	}
+	srcReader, err := client.Do(req)
+	if err != nil {
+		http.Error(w, "Upstream failed: "+err.Error(), http.StatusBadGateway)
+		atomic.AddInt64(&http_stats.upstream_error, 1)
+		return
+	}
+	if srcReader.StatusCode != http.StatusOK && srcReader.StatusCode != http.StatusNotModified {
 		http.Error(w, "Upstream failed: "+srcReader.Status, srcReader.StatusCode)
 		atomic.AddInt64(&http_stats.upstream_error, 1)
+		return
+	}
+
+	if srcReader.StatusCode == http.StatusNotModified {
+		w.WriteHeader(http.StatusNotModified)
+		atomic.AddInt64(&http_stats.ok, 1)
 		return
 	}
 

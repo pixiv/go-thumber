@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestThumbServer(t *testing.T) {
@@ -23,7 +25,19 @@ func TestThumbServer(t *testing.T) {
 }
 
 func originImageHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "../test-image/test001.jpg")
+	filename := "../test-image/test001.jpg"
+	finfo, err := os.Lstat(filename)
+	if err != nil {
+		panic(fmt.Sprintf("Can't lstat: %s", filename))
+	}
+	f, err := os.Open(filename);
+	defer f.Close()
+	if err != nil {
+		panic(fmt.Sprintf("Can't open file: %s", filename))
+	}
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	http.ServeContent(w, r, "", finfo.ModTime(), f)
 }
 
 func TestThumbServerWithSuccessCase(t *testing.T) {
@@ -42,6 +56,36 @@ func TestThumbServerWithSuccessCase(t *testing.T) {
 	}
 	if res.StatusCode != 200 {
 		t.Error("Status code should be 200, but got ", res.StatusCode)
+		return
+	}
+}
+
+func TestThumbServerWithConditionalGet(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(thumbServer))
+	defer ts.Close()
+
+	origin := httptest.NewServer(http.HandlerFunc(originImageHandler))
+
+	defer origin.Close()
+
+	originHost := fmt.Sprintf(strings.Replace(origin.URL, "http://", "", 1))
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", ts.URL + "/w=128,h=128,a=0,q=95/" + originHost + "/", nil)
+	if err != nil {
+		t.Error("unexpected")
+		return
+	}
+
+	now := time.Now()
+	req.Header.Add("If-Modified-Since", now.UTC().Format(http.TimeFormat));
+
+	res, err := client.Do(req)
+	if err != nil {
+		t.Error("unexpected")
+		return
+	}
+	if res.StatusCode != 304 {
+		t.Errorf("Status code should be 304, but got %d", res.StatusCode)
 		return
 	}
 }
