@@ -87,7 +87,11 @@ func destinationTerm(cinfo *C.struct_jpeg_compress_struct) {
 	flushBuffer(mgr, inBuffer)
 }
 
-func makeDestinationManager(dest io.Writer, cinfo *C.struct_jpeg_compress_struct) (ret destinationManager) {
+func makeDestinationManager(dest io.Writer, cinfo *C.struct_jpeg_compress_struct) (ret *destinationManager) {
+	ret = (*destinationManager)(C.malloc(C.size_t(unsafe.Sizeof(destinationManager{}))))
+	if ret == nil {
+		panic("Failed to allocate destinationManager")
+	}
 	ret.magic = magic
 	ret.dest = dest
 	ret.pub.init_destination = (*[0]byte)(C.destinationInit)
@@ -119,8 +123,16 @@ func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err
 		}
 	}()
 
-	var cinfo C.struct_jpeg_compress_struct
-	var jerr C.struct_jpeg_error_mgr
+	cinfo := (*C.struct_jpeg_compress_struct)(C.malloc(C.size_t(unsafe.Sizeof(C.struct_jpeg_compress_struct{}))))
+	if cinfo == nil {
+		panic("Failed to allocate cinfo")
+	}
+	defer C.free(unsafe.Pointer(cinfo))
+	cinfo.err = (*C.struct_jpeg_error_mgr)(C.malloc(C.size_t(unsafe.Sizeof(C.struct_jpeg_error_mgr{}))))
+	if cinfo.err == nil {
+		panic("Failed to allocate cinfo.err")
+	}
+	defer C.free(unsafe.Pointer(cinfo.err))
 
 	// No subsampling suport for now
 	if img.Format != YUV444 && img.Format != Grayscale {
@@ -128,15 +140,15 @@ func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err
 	}
 
 	// Setup error handling
-	C.jpeg_std_error(&jerr)
-	jerr.error_exit = (*[0]byte)(C.error_panic)
-	cinfo.err = &jerr
+	C.jpeg_std_error(cinfo.err)
+	cinfo.err.error_exit = (*[0]byte)(C.error_panic)
 
 	// Initialize compression object
-	C.c_jpeg_create_compress(&cinfo)
-	defer C.jpeg_destroy_compress(&cinfo)
+	C.c_jpeg_create_compress(cinfo)
+	defer C.jpeg_destroy_compress(cinfo)
 
-	makeDestinationManager(dest, &cinfo)
+	destManager := makeDestinationManager(dest, cinfo)
+	defer C.free(unsafe.Pointer(destManager))
 
 	// Set up compression parameters
 	cinfo.image_width = C.JDIMENSION(img.Width)
@@ -148,14 +160,14 @@ func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err
 		cinfo.in_color_space = C.JCS_GRAYSCALE
 	}
 
-	C.jpeg_set_defaults(&cinfo)
-	C.jpeg_set_quality(&cinfo, C.int(params.Quality), C.TRUE)
+	C.jpeg_set_defaults(cinfo)
+	C.jpeg_set_quality(cinfo, C.int(params.Quality), C.TRUE)
 	if params.Optimize {
 		cinfo.optimize_coding = C.TRUE
 	} else {
 		cinfo.optimize_coding = C.FALSE
 	}
-	C.jpeg_set_colorspace(&cinfo, cinfo.in_color_space)
+	C.jpeg_set_colorspace(cinfo, cinfo.in_color_space)
 	if params.FastDCT {
 		cinfo.dct_method = C.JDCT_IFAST
 	} else {
@@ -173,7 +185,7 @@ func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err
 	cinfo.raw_data_in = C.TRUE
 
 	// Start compression
-	C.jpeg_start_compress(&cinfo, C.TRUE)
+	C.jpeg_start_compress(cinfo, C.TRUE)
 
 	// Allocate JSAMPIMAGE to hold pointers to one iMCU worth of image data
 	// this is a safe overestimate; we use the return value from
@@ -196,11 +208,11 @@ func WriteJPEG(img *YUVImage, dest io.Writer, params CompressionParameters) (err
 			}
 		}
 		// Get the data
-		row += C.jpeg_write_raw_data(&cinfo, C.JSAMPIMAGE(unsafe.Pointer(&yuvPtr[0])), C.JDIMENSION(C.DCTSIZE*compInfo[0].v_samp_factor))
+		row += C.jpeg_write_raw_data(cinfo, C.JSAMPIMAGE(unsafe.Pointer(&yuvPtr[0])), C.JDIMENSION(C.DCTSIZE*compInfo[0].v_samp_factor))
 	}
 
 	// Clean up
-	C.jpeg_finish_compress(&cinfo)
+	C.jpeg_finish_compress(cinfo)
 
 	return
 }

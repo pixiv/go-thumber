@@ -113,7 +113,11 @@ func sourceTerm(dinfo *C.struct_jpeg_decompress_struct) {
 	// do nothing
 }
 
-func makeSourceManager(src io.Reader, dinfo *C.struct_jpeg_decompress_struct) (ret sourceManager) {
+func makeSourceManager(src io.Reader, dinfo *C.struct_jpeg_decompress_struct) (ret *sourceManager) {
+	ret = (*sourceManager)(C.malloc(C.size_t(unsafe.Sizeof(sourceManager{}))))
+	if ret == nil {
+		panic("Failed to allocate sourceManager")
+	}
 	ret.magic = magic
 	ret.src = src
 	ret.pub.init_source = (*[0]byte)(C.sourceInit)
@@ -156,22 +160,31 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 		}
 	}()
 
-	var dinfo C.struct_jpeg_decompress_struct
-	var jerr C.struct_jpeg_error_mgr
+	dinfo := (*C.struct_jpeg_decompress_struct)(C.malloc(C.size_t(unsafe.Sizeof(C.struct_jpeg_decompress_struct{}))))
+	if dinfo == nil {
+		panic("Failed to allocate dinfo")
+	}
+	defer C.free(unsafe.Pointer(dinfo))
+	dinfo.err = (*C.struct_jpeg_error_mgr)(C.malloc(C.size_t(unsafe.Sizeof(C.struct_jpeg_error_mgr{}))))
+	if dinfo.err == nil {
+		panic("Failed to allocate dinfo.err")
+	}
+	defer C.free(unsafe.Pointer(dinfo.err))
 
 	img = new(YUVImage)
 
 	// Setup error handling
-	C.jpeg_std_error(&jerr)
-	jerr.error_exit = (*[0]byte)(C.error_panic)
-	dinfo.err = &jerr
+	C.jpeg_std_error(dinfo.err)
+	dinfo.err.error_exit = (*[0]byte)(C.error_panic)
 
 	// Initialize decompression
-	C.c_jpeg_create_decompress(&dinfo)
-	defer C.jpeg_destroy_decompress(&dinfo)
+	C.c_jpeg_create_decompress(dinfo)
+	defer C.jpeg_destroy_decompress(dinfo)
 
-	makeSourceManager(src, &dinfo)
-	C.jpeg_read_header(&dinfo, C.TRUE)
+	srcManager := makeSourceManager(src, dinfo)
+	defer C.free(unsafe.Pointer(srcManager))
+
+	C.jpeg_read_header(dinfo, C.TRUE)
 
 	// Configure pre-scaling and request calculation of component info
 	if params.TargetWidth > 0 && params.TargetHeight > 0 {
@@ -194,7 +207,7 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 	} else {
 		dinfo.dct_method = C.JDCT_ISLOW
 	}
-	C.jpeg_calc_output_dimensions(&dinfo)
+	C.jpeg_calc_output_dimensions(dinfo)
 
 	// Figure out what color format we're dealing with after scaling
 	compInfo := (*[3]C.jpeg_component_info)(unsafe.Pointer(dinfo.comp_info))
@@ -271,7 +284,7 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 	}
 
 	// Start decompression
-	C.jpeg_start_decompress(&dinfo)
+	C.jpeg_start_decompress(dinfo)
 
 	// Allocate JSAMPIMAGE to hold pointers to one iMCU worth of image data
 	// this is a safe overestimate; we use the return value from
@@ -288,7 +301,7 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 
 	var iMCURows int
 	for i := 0; i < int(dinfo.num_components); i++ {
-		compRows := int(C.DCT_v_scaled_size(&dinfo, C.int(i)) * compInfo[i].v_samp_factor)
+		compRows := int(C.DCT_v_scaled_size(dinfo, C.int(i)) * compInfo[i].v_samp_factor)
 		if compRows > iMCURows {
 			iMCURows = compRows
 		}
@@ -306,11 +319,11 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 			}
 		}
 		// Get the data
-		row += C.jpeg_read_raw_data(&dinfo, C.JSAMPIMAGE(unsafe.Pointer(&yuvPtr[0])), C.JDIMENSION(2*iMCURows))
+		row += C.jpeg_read_raw_data(dinfo, C.JSAMPIMAGE(unsafe.Pointer(&yuvPtr[0])), C.JDIMENSION(2*iMCURows))
 	}
 
 	// Clean up
-	C.jpeg_finish_decompress(&dinfo)
+	C.jpeg_finish_decompress(dinfo)
 
 	return
 }
