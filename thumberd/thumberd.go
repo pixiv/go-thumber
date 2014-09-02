@@ -68,7 +68,7 @@ func thumbServer(w http.ResponseWriter, r *http.Request) {
 	atomic.AddInt64(&http_stats.inflight, 1)
 	defer atomic.AddInt64(&http_stats.inflight, -1)
 
-	path := r.RequestURI
+	path := r.URL.RequestURI()
 
 	// Defaults
 	var params = thumbnail.ThumbnailParameters{
