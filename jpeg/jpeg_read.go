@@ -36,7 +36,6 @@ import "C"
 import (
 	"fmt"
 	"io"
-	"math"
 	"unsafe"
 )
 
@@ -138,13 +137,6 @@ type DecompressionParameters struct {
 	TargetWidth  int  // Desired output width
 	TargetHeight int  // Desired output height
 	FastDCT      bool // Use a faster, less accurate DCT (note: do not use for Quality > 90)
-}
-
-// Calculate the smallest scale factor (in eigths) that will, after rounding
-// down during downscaling, meet or exceed the specified target size.
-func calcScale(target float64, size float64) int {
-	fmt.Printf("%f\n", (target*8)*(1-1/(size))/size)
-	return int(math.Ceil((target * 8) * (1 - 1/(size)) / size))
 }
 
 // ReadJPEG reads a JPEG file and returns a planar YUV image.
