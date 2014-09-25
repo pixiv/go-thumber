@@ -56,3 +56,19 @@ const magic uint32 = 0xdeadbeef
 func pad(a int, b int) int {
 	return (a + (b - 1)) & (^(b - 1))
 }
+
+func (i *YUVImage) PlaneWidth(plane int) int {
+	if plane != 0 && (i.Format == YUV422 || i.Format == YUV420) {
+		return (i.Width + 1) / 2
+	} else {
+		return i.Width
+	}
+}
+
+func (i *YUVImage) PlaneHeight(plane int) int {
+	if plane != 0 && (i.Format == YUV440 || i.Format == YUV420) {
+		return (i.Height + 1) / 2
+	} else {
+		return i.Height
+	}
+}

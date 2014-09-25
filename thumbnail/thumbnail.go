@@ -54,13 +54,9 @@ func MakeThumbnail(src io.Reader, dst io.Writer, params ThumbnailParameters) err
 			}
 		}
 		opts.Filter = swscale.Lanczos
-		// swscale can't handle images smaller than this; punt and don't scale
-		// them.
-		if opts.DstWidth >= 8 && img.Width >= 4 {
-			img, err = swscale.Scale(img, opts)
-			if err != nil {
-				return err
-			}
+		img, err = swscale.Scale(img, opts)
+		if err != nil {
+			return err
 		}
 	}
 

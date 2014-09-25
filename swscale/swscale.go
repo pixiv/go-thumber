@@ -73,9 +73,19 @@ func Scale(src *jpeg.YUVImage, opts ScaleOptions) (*jpeg.YUVImage, error) {
 		dst.Format = jpeg.Grayscale
 	}
 
+	// swscale can't handle images smaller than this; pad them
+	paddedDstWidth := opts.DstWidth
+	paddedSrcWidth := src.Width
+	padFactor := 1
+	for paddedDstWidth < 8 || paddedSrcWidth < 4 {
+		paddedDstWidth *= 2
+		paddedSrcWidth *= 2
+		padFactor *= 2
+	}
+
 	// Get the SWS context
-	sws := C.sws_getContext(C.int(src.Width), C.int(src.Height), srcFmt,
-		C.int(opts.DstWidth), C.int(opts.DstHeight), dstFmt,
+	sws := C.sws_getContext(C.int(paddedSrcWidth), C.int(src.Height), srcFmt,
+		C.int(paddedDstWidth), C.int(opts.DstHeight), dstFmt,
 		flags, nil, nil, nil)
 
 	if sws == nil {
@@ -88,37 +98,57 @@ func Scale(src *jpeg.YUVImage, opts ScaleOptions) (*jpeg.YUVImage, error) {
 	// of all 4 pointers... better give it a dummy one.
 	var srcYUVPtr [4](*uint8)
 	var dstYUVPtr [4](*uint8)
-	var srcStride [4](C.int)
-	var dstStride [4](C.int)
-	paddedWidth := pad(opts.DstWidth, jpeg.AlignSize)
-	paddedHeight := pad(opts.DstHeight, jpeg.AlignSize)
+	var srcStrides [4](C.int)
+	var dstStrides [4](C.int)
+
+	dst.Width = opts.DstWidth
+	dst.Height = opts.DstHeight
+	dstStride := pad(paddedDstWidth, jpeg.AlignSize)
+	dstFinalPaddedWidth := pad(opts.DstWidth, jpeg.AlignSize)
+	dstPaddedHeight := pad(opts.DstHeight, jpeg.AlignSize)
 	// Allocate image planes and pointers
 	for i := 0; i < components; i++ {
-		dst.Width = opts.DstWidth
-		dst.Height = opts.DstHeight
-		dst.Stride[i] = paddedWidth
-		dst.Data[i] = make([]byte, dst.Stride[i]*paddedHeight)
-		srcYUVPtr[i] = (*uint8)(unsafe.Pointer(&src.Data[i][0]))
+		dst.Stride[i] = dstStride
+		dst.Data[i] = make([]byte, dstStride*dstPaddedHeight)
 		dstYUVPtr[i] = (*uint8)(unsafe.Pointer(&dst.Data[i][0]))
-		srcStride[i] = C.int(src.Stride[i])
-		dstStride[i] = C.int(dst.Stride[i])
+		dstStrides[i] = C.int(dstStride)
+		// apply horizontal padding if image is too small
+		if padFactor > 1 {
+			planeWidth := src.PlaneWidth(i)
+			paddedWidth := planeWidth * padFactor
+			planeHeight := src.PlaneHeight(i)
+			paddedStride := pad(paddedWidth, jpeg.AlignSize)
+			newData := make([]uint8, paddedStride*planeHeight)
+			for y := 0; y < planeHeight; y++ {
+				copy(newData[y*paddedStride:], src.Data[i][y*src.Stride[i]:y*src.Stride[i]+planeWidth])
+				pixel := src.Data[i][y*src.Stride[i]+planeWidth-1]
+				for x := planeWidth; x < paddedWidth; x++ {
+					newData[y*paddedStride+x] = pixel
+				}
+			}
+			srcStrides[i] = C.int(paddedStride)
+			srcYUVPtr[i] = &newData[0]
+		} else {
+			srcStrides[i] = C.int(src.Stride[i])
+			srcYUVPtr[i] = (*uint8)(unsafe.Pointer(&src.Data[i][0]))
+		}
 	}
 
-	C.sws_scale(sws, (**C.uint8_t)(unsafe.Pointer(&srcYUVPtr[0])), &srcStride[0], 0, C.int(src.Height),
-		(**C.uint8_t)(unsafe.Pointer(&dstYUVPtr[0])), &dstStride[0])
+	C.sws_scale(sws, (**C.uint8_t)(unsafe.Pointer(&srcYUVPtr[0])), &srcStrides[0], 0, C.int(src.Height),
+		(**C.uint8_t)(unsafe.Pointer(&dstYUVPtr[0])), &dstStrides[0])
 
 	// Replicate the last column and row of pixels as padding, which is typical
 	// behavior prior to JPEG compression
 	for i := 0; i < components; i++ {
 		for y := 0; y < dst.Height; y++ {
-			pixel := dst.Data[i][y*paddedWidth+dst.Width-1]
-			for x := dst.Width; x < paddedWidth; x++ {
-				dst.Data[i][y*paddedWidth+x] = pixel
+			pixel := dst.Data[i][y*dstStride+dst.Width-1]
+			for x := dst.Width; x < dstFinalPaddedWidth; x++ {
+				dst.Data[i][y*dstStride+x] = pixel
 			}
 		}
-		lastRow := dst.Data[i][paddedWidth*(dst.Height-1) : paddedWidth*dst.Height]
-		for y := dst.Height; y < paddedHeight; y++ {
-			copy(dst.Data[i][y*paddedWidth:], lastRow)
+		lastRow := dst.Data[i][dstStride*(dst.Height-1) : dstStride*dst.Height]
+		for y := dst.Height; y < dstPaddedHeight; y++ {
+			copy(dst.Data[i][y*dstStride:], lastRow)
 		}
 	}
 
