@@ -51,7 +51,7 @@ func Scale(src *jpeg.YUVImage, opts ScaleOptions) (*jpeg.YUVImage, error) {
 	// Figure out what format we're dealing with
 	var srcFmt, dstFmt int32
 	var flags C.int
-	flags = C.SWS_FULL_CHR_H_INT | C.int(opts.Filter)
+	flags = C.SWS_FULL_CHR_H_INT | C.int(opts.Filter) | C.SWS_ACCURATE_RND
 	components := 3
 	var dst jpeg.YUVImage
 	dstFmt = C.PIX_FMT_YUV444P
