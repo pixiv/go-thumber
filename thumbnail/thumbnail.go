@@ -49,8 +49,14 @@ func MakeThumbnail(src io.Reader, dst io.Writer, params ThumbnailParameters) err
 		if !params.ForceAspect {
 			if opts.DstWidth > params.Height*img.Width/img.Height {
 				opts.DstWidth = int(float64(params.Height*img.Width)/float64(img.Height) + 0.5)
+				if opts.DstWidth <= 0 {
+					opts.DstWidth = 1
+				}
 			} else if opts.DstHeight > params.Width*img.Height/img.Width {
 				opts.DstHeight = int(float64(params.Width*img.Height)/float64(img.Width) + 0.5)
+				if opts.DstHeight <= 0 {
+					opts.DstHeight = 1
+				}
 			}
 		}
 		opts.Filter = swscale.Lanczos
