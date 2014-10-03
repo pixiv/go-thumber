@@ -163,6 +163,7 @@ func thumbServer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
 	err = thumbnail.MakeThumbnail(srcReader.Body, w, params)
 	if err != nil {
 		switch err := err.(type) {
