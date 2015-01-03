@@ -16,7 +16,6 @@ func goPanic(msg *C.char) {
 	panic(C.GoString(msg))
 }
 
-
 // The dimension multiple to which data buffers should be aligned.
 const AlignSize int = 16
 
