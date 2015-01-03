@@ -39,6 +39,9 @@ On hardened setups which default to PIC builds, the following flag is required:
 
     $ go install -ldflags '-extldflags=-fno-PIC' github.com/pixiv/go-thumber/thumberd
 
+And the versioning is possible on build-time.
+
+    $ go install -ldflags '-X main.version v1.3' github.com/pixiv/go-thumber/thumberd
 
 ### Usage
 
