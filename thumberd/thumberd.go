@@ -28,13 +28,13 @@ const maxDimension = 65000
 const maxPixels = 10000000
 
 var http_stats struct {
-	received int64
-	inflight int64
-	ok int64
-	thumb_error int64
+	received       int64
+	inflight       int64
+	ok             int64
+	thumb_error    int64
 	upstream_error int64
-	arg_error int64
-	total_time_us int64
+	arg_error      int64
+	total_time_us  int64
 }
 
 func init() {
