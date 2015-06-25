@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/http/fcgi"
 	"net/url"
@@ -16,7 +17,7 @@ import (
 	"github.com/pixiv/go-thumber/thumbnail"
 )
 
-var local = flag.String("local", "", "serve as webserver, example: 0.0.0.0:8000")
+var local = flag.String("local", "", "serve as webserver, example: 0.0.0.0:8000, /var/run/go-thumber.sock")
 var timeout = flag.Int("timeout", 3, "timeout for upstream HTTP requests, in seconds")
 var show_version = flag.Bool("version", false, "show version and exit")
 
@@ -198,7 +199,15 @@ func main() {
 	http.HandleFunc("/", thumbServer)
 
 	if *local != "" { // Run as a local web server
-		err = http.ListenAndServe(*local, nil)
+		if strings.HasSuffix(*local, ".sock") {
+			l, err := net.Listen("unix", *local)
+			if err != nil {
+				log.Fatal(err)
+			}
+			err = http.Serve(l, http.DefaultServeMux)
+		} else {
+			err = http.ListenAndServe(*local, nil)
+		}
 	} else { // Run as FCGI via standard I/O
 		err = fcgi.Serve(nil, nil)
 	}
