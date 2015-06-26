@@ -205,10 +205,10 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			err = http.Serve(l, http.DefaultServeMux)
 			if err := os.Chmod(*local, 0666); err != nil {
 				log.Fatal(err)
 			}
+			err = http.Serve(l, http.DefaultServeMux)
 		} else {
 			err = http.ListenAndServe(*local, nil)
 		}
