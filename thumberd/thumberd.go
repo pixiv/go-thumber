@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"net/url"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -205,6 +206,9 @@ func main() {
 				log.Fatal(err)
 			}
 			err = http.Serve(l, http.DefaultServeMux)
+			if err := os.Chmod(*local, 0666); err != nil {
+				log.Fatal(err)
+			}
 		} else {
 			err = http.ListenAndServe(*local, nil)
 		}
