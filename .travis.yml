@@ -13,7 +13,8 @@ env:
   - TURBO_VER="1.3.1" CGO_LDFLAGS="-L/opt/libjpeg-turbo/lib64" CGO_CFLAGS="-I/opt/libjpeg-turbo/include" LD_LIBRARY_PATH="/opt/libjpeg-turbo/lib64"
 
 before_install:
-  - ./.travis-install-libjpeg-turbo.sh "$TURBO_VER"
+  - sudo apt-get install libswscale-dev libjpeg-dev
+  - ./travis-install-libjpeg-turbo.sh "$TURBO_VER"
   - cd $HOME/gopath/src/github.com/pixiv/go-thumber
 
 script:
