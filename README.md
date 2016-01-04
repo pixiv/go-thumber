@@ -1,5 +1,7 @@
 ## go-thumber
 
+[![Build Status](https://travis-ci.org/pixiv/go-thumber.svg)](https://travis-ci.org/pixiv/go-thumber)
+
 go-thumber is a dynamic JPEG thumbnailing proxy designed for speed. It
 implements JPEG -> JPEG thumbnailing only.
 
