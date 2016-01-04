@@ -200,7 +200,7 @@ func main() {
 	http.HandleFunc("/", thumbServer)
 
 	if *local != "" { // Run as a local web server
-		if strings.HasSuffix(*local, ".sock") {
+		if strings.HasSuffix(*local, ".sock") || strings.HasPrefix(*local, ".") || strings.HasPrefix(*local, "/") {
 			l, err := net.Listen("unix", *local)
 			if err != nil {
 				log.Fatal(err)
