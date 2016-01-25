@@ -15,6 +15,10 @@ static void c_jpeg_create_decompress(j_decompress_ptr dinfo) {
 	jpeg_create_decompress(dinfo);
 }
 
+static JDIMENSION _jpeg_read_raw_data(j_decompress_ptr dinfo, uintptr_t data, JDIMENSION max_lines) {
+	return jpeg_read_raw_data(dinfo, (JSAMPIMAGE)data, max_lines);
+}
+
 void error_panic(j_common_ptr dinfo);
 
 void sourceInit(struct jpeg_decompress_struct*);
@@ -311,7 +315,7 @@ func ReadJPEG(src io.Reader, params DecompressionParameters) (img *YUVImage, err
 			}
 		}
 		// Get the data
-		row += C.jpeg_read_raw_data(dinfo, C.JSAMPIMAGE(unsafe.Pointer(&yuvPtr[0])), C.JDIMENSION(2*iMCURows))
+		row += C._jpeg_read_raw_data(dinfo, C.uintptr_t(uintptr(unsafe.Pointer(&yuvPtr[0]))), C.JDIMENSION(2*iMCURows))
 	}
 
 	// Clean up
