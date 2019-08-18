@@ -54,21 +54,21 @@ func Scale(src *jpeg.YUVImage, opts ScaleOptions) (*jpeg.YUVImage, error) {
 	flags = C.SWS_FULL_CHR_H_INT | C.int(opts.Filter) | C.SWS_ACCURATE_RND
 	components := 3
 	var dst jpeg.YUVImage
-	dstFmt = C.PIX_FMT_YUV444P
+	dstFmt = C.AV_PIX_FMT_YUV444P
 	dst.Format = jpeg.YUV444
 	switch src.Format {
 	case jpeg.YUV444:
-		srcFmt = C.PIX_FMT_YUV444P
+		srcFmt = C.AV_PIX_FMT_YUV444P
 		flags |= C.SWS_FULL_CHR_H_INP
 	case jpeg.YUV422:
-		srcFmt = C.PIX_FMT_YUV422P
+		srcFmt = C.AV_PIX_FMT_YUV422P
 	case jpeg.YUV440:
-		srcFmt = C.PIX_FMT_YUV440P
+		srcFmt = C.AV_PIX_FMT_YUV440P
 	case jpeg.YUV420:
-		srcFmt = C.PIX_FMT_YUV420P
+		srcFmt = C.AV_PIX_FMT_YUV420P
 	case jpeg.Grayscale:
-		srcFmt = C.PIX_FMT_GRAY8
-		dstFmt = C.PIX_FMT_GRAY8
+		srcFmt = C.AV_PIX_FMT_GRAY8
+		dstFmt = C.AV_PIX_FMT_GRAY8
 		components = 1
 		dst.Format = jpeg.Grayscale
 	}
